@@ -786,15 +786,19 @@ async function renderCard(username) {
 
     // Mouse parallax
     const card = document.getElementById('devCard');
-    card.addEventListener('mousemove', (e) => {
+    card.onmousemove = (e) => {
       const rect = card.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
       card.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 10}deg) scale(1.02)`;
-    });
-    card.addEventListener('mouseleave', () => {
+    };
+    card.onmouseleave = () => {
       card.style.transform = '';
-    });
+    };
+
+    card.onclick = () => {
+      window.open(`https://github.com/${encodeURIComponent(user.login)}`, '_blank', 'noopener,noreferrer');
+    };
 
   } catch(err) {
     status.textContent = err.message;
