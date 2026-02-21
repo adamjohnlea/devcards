@@ -7,7 +7,7 @@ Generate collectible trading cards for any GitHub developer. Enter a username, g
 - **Rarity system** — cards are ranked COMMON, UNCOMMON, RARE, EPIC, or LEGENDARY based on stars and followers
 - **Special ability** — generated from the developer's GitHub profile (languages, repos, follower count, hireable status)
 - **Account vintage** — shows the year the account was created; accounts 10+ years old earn a VETERAN modifier
-- **GitDex** — save cards to a persistent local collection (stored in `localStorage`), click any tile to regenerate, drag tiles to reorder
+- **GitDex** — save cards to a persistent local collection (stored in `localStorage`), click any tile to regenerate, drag tiles to reorder; full touch support on mobile with press-to-select and drag-to-reorder
 - **Share to X** — opens a pre-filled tweet with the card's rarity and a shareable link
 - **Download** — exports a 3× resolution PNG rendered via Canvas (pixel-perfect match to the on-page card)
 - **Deep links** — any card URL (`?user=torvalds`) auto-generates the card on load and can be shared directly
