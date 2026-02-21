@@ -536,9 +536,147 @@
     transition: color 0.2s;
   }
   .examples span:hover { color: var(--accent); }
+
+  /* ── SETTINGS ─────────────────────────── */
+  .settings-wrap {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  .settings-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+
+  .settings-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .settings-toggle.active { border-color: #00cc88; color: #00cc88; }
+
+  .settings-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    width: 280px;
+  }
+
+  .settings-panel.open { max-height: 240px; }
+
+  .settings-panel-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 16px;
+    margin-top: -1px;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .settings-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .settings-hint {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .settings-hint a {
+    color: rgba(0,245,255,0.7);
+    text-decoration: none;
+  }
+
+  .settings-hint a:hover { color: var(--accent); }
+
+  .settings-token-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .settings-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px 10px;
+    outline: none;
+    min-width: 0;
+    transition: border-color 0.2s;
+    border-radius: 2px;
+  }
+
+  .settings-input:focus { border-color: var(--accent); }
+
+  .settings-save {
+    background: linear-gradient(135deg, #00f5ff, #b400ff);
+    border: none;
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    border-radius: 2px;
+  }
+
+  .settings-save:hover { opacity: 0.85; }
+
+  .settings-status {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+
+  .settings-status.ok  { color: #00cc88; }
+  .settings-status.err { color: #ff4466; }
 </style>
 </head>
 <body>
+
+<div class="settings-wrap">
+  <button class="settings-toggle" id="settingsToggle" onclick="toggleSettings()" title="GitHub Token Settings">⚙</button>
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-panel-inner">
+      <div class="settings-label">GitHub Token</div>
+      <div class="settings-hint">
+        Raises the API limit from 60 to 5,000 req/hr.<br>
+        <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener noreferrer">Generate a token →</a>
+      </div>
+      <div class="settings-token-row">
+        <input class="settings-input" id="tokenInput" type="password" placeholder="ghp_••••••••••••" autocomplete="off" />
+        <button class="settings-save" onclick="saveToken()">SAVE</button>
+      </div>
+      <div class="settings-status" id="settingsStatus"></div>
+    </div>
+  </div>
+</div>
 
 <div class="app-header">
   <a href="/" class="app-title">DEV CARDS</a>
@@ -662,11 +800,21 @@ function buildAbility(data, langs) {
   return `${topLang} Craftsman — Forging digital experiences`;
 }
 
+function getToken() {
+  return localStorage.getItem('gh_token') || null;
+}
+
+function githubHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function fetchUserData(username) {
   const enc = encodeURIComponent(username);
+  const opts = { headers: githubHeaders() };
   const [userRes, reposRes] = await Promise.all([
-    fetch(`https://api.github.com/users/${enc}`),
-    fetch(`https://api.github.com/users/${enc}/repos?per_page=100&sort=updated`)
+    fetch(`https://api.github.com/users/${enc}`, opts),
+    fetch(`https://api.github.com/users/${enc}/repos?per_page=100&sort=updated`, opts)
   ]);
 
   if (!userRes.ok) {
@@ -1181,8 +1329,41 @@ async function loadImgCORS(src) {
   });
 }
 
+// ── Settings / Token ─────────────────────────────────────────────────────────
+
+function toggleSettings() {
+  const panel  = document.getElementById('settingsPanel');
+  const toggle = document.getElementById('settingsToggle');
+  const isOpen = panel.classList.toggle('open');
+  toggle.classList.toggle('open', isOpen);
+  if (isOpen) {
+    const saved = getToken();
+    document.getElementById('tokenInput').value = saved || '';
+    document.getElementById('settingsStatus').textContent = saved ? 'Token active' : '';
+    document.getElementById('settingsStatus').className = saved ? 'settings-status ok' : 'settings-status';
+  }
+}
+
+function saveToken() {
+  const val    = document.getElementById('tokenInput').value.trim();
+  const status = document.getElementById('settingsStatus');
+  const toggle = document.getElementById('settingsToggle');
+  if (val) {
+    localStorage.setItem('gh_token', val);
+    status.textContent = 'Token saved';
+    status.className = 'settings-status ok';
+    toggle.classList.add('active');
+  } else {
+    localStorage.removeItem('gh_token');
+    status.textContent = 'Token cleared';
+    status.className = 'settings-status err';
+    toggle.classList.remove('active');
+  }
+}
+
 // Init
 renderGitDex();
+if (getToken()) document.getElementById('settingsToggle').classList.add('active');
 const _initUser = new URLSearchParams(window.location.search).get('user');
 if (_initUser && VALID_USERNAME.test(_initUser)) {
   document.getElementById('usernameInput').value = _initUser;
