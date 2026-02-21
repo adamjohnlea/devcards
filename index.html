@@ -457,6 +457,44 @@
     flex-wrap: wrap;
   }
 
+  /* ── FOOTER ───────────────────────────── */
+  .site-footer {
+    margin-top: 64px;
+    margin-bottom: 8px;
+  }
+
+  .star-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .star-link:hover {
+    color: #ffd700;
+    border-color: #ffd70055;
+  }
+
+  .star-link:hover .star-icon {
+    color: #ffd700;
+  }
+
+  .star-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    transition: color 0.2s;
+  }
+
   .dex-tile {
     position: relative;
     width: 100px;
@@ -790,6 +828,13 @@
   </div>
   <div class="gitdex-grid" id="gitdexGrid"></div>
 </div>
+
+<footer class="site-footer">
+  <a href="https://github.com/adamjohnlea/devcards" target="_blank" rel="noopener" class="star-link">
+    <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Drop a star on the repo
+  </a>
+</footer>
 
 <script>
 let currentCardData = null;
