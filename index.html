@@ -668,7 +668,27 @@ async function fetchUserData(username) {
     fetch(`https://api.github.com/users/${enc}`),
     fetch(`https://api.github.com/users/${enc}/repos?per_page=100&sort=updated`)
   ]);
-  if (!userRes.ok) throw new Error(userRes.status === 404 ? 'User not found' : 'GitHub API error');
+
+  if (!userRes.ok) {
+    const remaining = userRes.headers.get('X-RateLimit-Remaining');
+    const reset     = userRes.headers.get('X-RateLimit-Reset');
+    const body      = await userRes.json().catch(() => ({}));
+
+    console.error('[GitHub API]', {
+      status:    userRes.status,
+      message:   body.message,
+      remaining: remaining,
+      resetsAt:  reset ? new Date(reset * 1000).toLocaleTimeString() : null,
+    });
+
+    if (userRes.status === 404) throw new Error('User not found');
+    if (userRes.status === 403 || userRes.status === 429) {
+      const resetsAt = reset ? ` Resets at ${new Date(reset * 1000).toLocaleTimeString()}.` : '';
+      throw new Error(`Rate limit exceeded.${resetsAt}`);
+    }
+    throw new Error(body.message || `GitHub API error (${userRes.status})`);
+  }
+
   const user = await userRes.json();
   const repos = reposRes.ok ? await reposRes.json() : [];
   return { user, repos };
