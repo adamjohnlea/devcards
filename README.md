@@ -49,3 +49,7 @@ Uses only public endpoints — no authentication or API key required. Anonymous 
 ## Sharing
 
 When a card is generated, the URL updates to `?user=username`. Anyone who opens that link lands directly on that developer's card. The X share button includes the URL so recipients can generate their own card.
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE) for details.
