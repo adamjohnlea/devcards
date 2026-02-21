@@ -510,6 +510,15 @@
 
   .dex-tile:hover .dex-tile__remove { opacity: 1; }
 
+  .dex-tile--drag-over {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  .dex-tile[draggable] { cursor: grab; }
+  .dex-tile[draggable]:active { cursor: grabbing; }
+
   .hidden { display: none; }
 
   .spinner {
@@ -759,6 +768,7 @@
 
 <script>
 let currentCardData = null;
+let dragSrcUsername = null;
 
 const LANG_COLORS = {
   JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
@@ -1079,6 +1089,9 @@ function renderGitDex() {
   dex.forEach(entry => {
     const tile = document.createElement('div');
     tile.className = 'dex-tile';
+    tile.draggable = true;
+    tile.dataset.username = entry.username;
+
     const img = document.createElement('img');
     img.className = 'dex-tile__avatar';
     img.src = entry.avatarUrl;
@@ -1097,6 +1110,39 @@ function renderGitDex() {
     removeBtn.title = 'Remove';
     removeBtn.textContent = '×';
     tile.append(img, nameEl, rarityEl, removeBtn);
+
+    // Drag events
+    tile.addEventListener('dragstart', (e) => {
+      dragSrcUsername = entry.username;
+      e.dataTransfer.effectAllowed = 'move';
+      tile.style.opacity = '0.4';
+    });
+    tile.addEventListener('dragend', () => {
+      tile.style.opacity = '';
+      document.querySelectorAll('.dex-tile--drag-over').forEach(el => el.classList.remove('dex-tile--drag-over'));
+    });
+    tile.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (entry.username !== dragSrcUsername) tile.classList.add('dex-tile--drag-over');
+    });
+    tile.addEventListener('dragleave', () => {
+      tile.classList.remove('dex-tile--drag-over');
+    });
+    tile.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      tile.classList.remove('dex-tile--drag-over');
+      if (!dragSrcUsername || dragSrcUsername === entry.username) return;
+      const newDex = getDex();
+      const fromIdx = newDex.findIndex(x => x.username === dragSrcUsername);
+      const toIdx   = newDex.findIndex(x => x.username === entry.username);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = newDex.splice(fromIdx, 1);
+      newDex.splice(toIdx, 0, moved);
+      saveDex(newDex);
+      renderGitDex();
+    });
 
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
