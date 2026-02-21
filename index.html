@@ -843,8 +843,8 @@ async function downloadCard() {
 
 function shareCard() {
   if (!currentCardData) return;
-  const { name, handle, rarity } = currentCardData;
-  const text = `Just generated a ${rarity.label} Dev Card for ${name} (${handle}) 🃏 #DevCards`;
+  const { name, rarity } = currentCardData;
+  const text = `Just generated a ${rarity.label} Dev Card for ${name} 🃏 #DevCards`;
   const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`;
   window.open(url, '_blank', 'width=560,height=420');
 }
