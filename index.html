@@ -414,6 +414,10 @@
   .card-front {
     position: relative;
     min-height: 520px;
+    /* Makes the front its own stacking context and 3D plane. Without it, the front's
+       z-indexed children (.card-inner, .card-foil) escape into .card-flipper's stacking
+       context, paint over the back, and Firefox doesn't hide them with backface-visibility. */
+    transform: rotateY(0deg);
   }
 
   .card-back {
