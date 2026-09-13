@@ -29,7 +29,11 @@ The entire app is a single `index.html` file containing HTML, CSS, and vanilla J
 
 On card generation, the app fetches:
 - `GET /users/{username}`: profile data
-- `GET /users/{username}/repos?per_page=100&sort=full_name&page=N`: every page of repositories, so star totals are accurate for accounts with more than 100 repos (a 1,000-repo account costs about 11 requests)
+- `GET /users/{username}/repos?per_page=100&sort=full_name&page=N`: every page of repositories, so star totals are accurate for accounts with more than 100 repos
+- `GET /users/{username}/events/public?per_page=100`: recent public activity, for the MOMENTUM stat
+- `GET /search/issues?q=author:{username} type:pr is:merged&per_page=1`: merged pull request count, for the CONTRIBUTIONS stat
+
+A fresh card costs 4 requests for accounts with up to 100 repos, plus 1 per additional 100 repos. GitHub search has its own rate limit: 10 requests/minute anonymous, 30 with a token.
 
 Results are cached in `localStorage` for 1 hour per username, so regenerating a card (from GitDex, a reload, or a shared link) makes no API calls.
 
