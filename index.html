@@ -1091,7 +1091,7 @@ const STAT_DEFS = [
   { key: 'impact',        label: 'IMPACT',        scale: 'log',    cap: 1000000, raw: r => r.stars,         format: v => `${fmtNum(v)} stars` },
   { key: 'influence',     label: 'INFLUENCE',     scale: 'log',    cap: 500000,  raw: r => r.followers,     format: v => `${fmtNum(v)} followers` },
   { key: 'contributions', label: 'CONTRIBUTIONS', scale: 'log',    cap: 5000,    raw: r => r.mergedPrs,     format: v => `${fmtNum(v)} merged PRs` },
-  { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events/day` },
+  { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events per day` },
   { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'yr' : 'yrs'}`; } },
   { key: 'range',         label: 'RANGE',         scale: 'linear', cap: 12,      raw: r => r.languageCount, format: v => `${v} ${v === 1 ? 'language' : 'languages'}` },
 ];
