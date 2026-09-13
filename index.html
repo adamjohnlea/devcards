@@ -937,7 +937,7 @@
               <div class="card-series" id="backTitle">BATTLE STATS</div>
               <div class="card-back-handle" id="backHandle"></div>
             </div>
-            <ul class="battle-stats" id="battleStats"></ul>
+            <ul class="battle-stats" id="battleStats" role="list"></ul>
             <div class="card-footer">
               <div></div>
               <div class="card-meta">
@@ -1216,7 +1216,7 @@ function computeStats(repos) {
 // Spec: docs/superpowers/specs/2026-09-12-battle-stats-design.md
 
 const EVENTS_PAGE_SIZE = 100;
-const EVENTS_WINDOW_DAYS = 90;
+const EVENTS_WINDOW_DAYS = 30;
 const MS_PER_DAY = 86400000;
 
 function formatRate(v) {
@@ -1229,7 +1229,7 @@ const STAT_DEFS = [
   { key: 'influence',     label: 'INFLUENCE',     scale: 'log',    cap: 500000,  raw: r => r.followers,     format: v => `${fmtNum(v)} followers` },
   { key: 'contributions', label: 'CONTRIBUTIONS', scale: 'log',    cap: 5000,    raw: r => r.mergedPrs,     format: v => `${fmtNum(v)} merged PRs` },
   { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events per day` },
-  { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'yr' : 'yrs'}`; } },
+  { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'year' : 'years'}`; } },
   { key: 'range',         label: 'RANGE',         scale: 'linear', cap: 12,      raw: r => r.languageCount, format: v => `${v} ${v === 1 ? 'language' : 'languages'}` },
 ];
 
@@ -1242,7 +1242,7 @@ function scoreStat(def, raw) {
   return Math.round(99 * Math.min(1, ratio));
 }
 
-// One page of events: a short page is the whole 90-day window; a full page covers
+// One page of events: a short page is the whole 30-day window; a full page covers
 // only back to its oldest event, floored at 1 day so a burst can't spike the rate.
 function momentumRate(events, fetchedAt) {
   if (events.count < EVENTS_PAGE_SIZE) return events.count / EVENTS_WINDOW_DAYS;

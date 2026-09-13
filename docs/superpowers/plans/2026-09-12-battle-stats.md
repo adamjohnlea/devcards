@@ -44,10 +44,10 @@ Pure functions only. No network, no DOM.
 **Interfaces:**
 - Consumes: `fmtNum(n)` (existing, defined near the top of the script).
 - Produces:
-  - `const EVENTS_PAGE_SIZE = 100`, `const EVENTS_WINDOW_DAYS = 90`, `const MS_PER_DAY = 86400000`
+  - `const EVENTS_PAGE_SIZE = 100`, `const EVENTS_WINDOW_DAYS = 30`, `const MS_PER_DAY = 86400000`
   - `const STAT_DEFS`: array of `{ key: string, label: string, scale: 'log'|'linear', cap: number, raw: (rawInputs) => number, format: (value: number) => string }`, in order impact, influence, contributions, momentum, veterancy, range
   - `scoreStat(def, raw: number) => number` (integer 0–99; throws on non-finite raw)
-  - `momentumRate(events: {count: number, oldestAt: string|null}, fetchedAt: number) => number` (events/day)
+  - `momentumRate(events: {count: number, oldestAt: string|null}, fetchedAt: number) => number` (events per day)
   - `battleRawInputs(data) => { stars, followers, mergedPrs, momentumRate, accountYears, languageCount }` where `data` is a cache entry: `{ stars, langs, mergedPrs, events, fetchedAt, user: { followers, created_at, ... } }`
   - `computeBattleStats(rawInputs) => { impact, influence, contributions, momentum, veterancy, range }` (keys in `STAT_DEFS` order)
 
@@ -67,12 +67,12 @@ const cases = [
 ];
 const scoreFailures = cases
   .map(([k, raw, want]) => ({ k, raw, want, got: scoreStat(def(k), raw) }))
-  .filter(c => c.got !== want);
+  .filter(c => c.got !== c.want);
 
 const now = Date.parse('2026-09-12T12:00:00Z');
 const ago = ms => new Date(now - ms).toISOString();
 const momentumFailures = [
-  [{ count: 40,  oldestAt: ago(80 * MS_PER_DAY) }, 40 / 90],
+  [{ count: 40,  oldestAt: ago(80 * MS_PER_DAY) }, 40 / 30],
   [{ count: 100, oldestAt: ago(2 * MS_PER_DAY) },  50],
   [{ count: 100, oldestAt: ago(20 * MS_PER_DAY) }, 5],
   [{ count: 100, oldestAt: ago(10 * 60 * 1000) },  100],
@@ -115,7 +115,7 @@ Insert after the closing `}` of `computeStats`:
 // Spec: docs/superpowers/specs/2026-09-12-battle-stats-design.md
 
 const EVENTS_PAGE_SIZE = 100;
-const EVENTS_WINDOW_DAYS = 90;
+const EVENTS_WINDOW_DAYS = 30;
 const MS_PER_DAY = 86400000;
 
 function formatRate(v) {
@@ -127,8 +127,8 @@ const STAT_DEFS = [
   { key: 'impact',        label: 'IMPACT',        scale: 'log',    cap: 1000000, raw: r => r.stars,         format: v => `${fmtNum(v)} stars` },
   { key: 'influence',     label: 'INFLUENCE',     scale: 'log',    cap: 500000,  raw: r => r.followers,     format: v => `${fmtNum(v)} followers` },
   { key: 'contributions', label: 'CONTRIBUTIONS', scale: 'log',    cap: 5000,    raw: r => r.mergedPrs,     format: v => `${fmtNum(v)} merged PRs` },
-  { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events/day` },
-  { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'yr' : 'yrs'}`; } },
+  { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events per day` },
+  { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'year' : 'years'}`; } },
   { key: 'range',         label: 'RANGE',         scale: 'linear', cap: 12,      raw: r => r.languageCount, format: v => `${v} ${v === 1 ? 'language' : 'languages'}` },
 ];
 
@@ -141,7 +141,7 @@ function scoreStat(def, raw) {
   return Math.round(99 * Math.min(1, ratio));
 }
 
-// One page of events: a short page is the whole 90-day window; a full page covers
+// One page of events: a short page is the whole 30-day window; a full page covers
 // only back to its oldest event, floored at 1 day so a burst can't spike the rate.
 function momentumRate(events, fetchedAt) {
   if (events.count < EVENTS_PAGE_SIZE) return events.count / EVENTS_WINDOW_DAYS;
@@ -172,7 +172,7 @@ Reload, rerun the Step 1 snippet.
 Expected:
 
 ```json
-{"scoreFailures":[],"momentumFailures":[],"statsOk":true,"stats":{"impact":66,"influence":52,"contributions":75,"momentum":45,"veterancy":55,"range":33},"formatted":["10K stars","1K followers","632 merged PRs","5 events/day","10 yrs","4 languages"],"singular":["1 language","1 yr","0.4 events/day"],"nanThrows":true}
+{"scoreFailures":[],"momentumFailures":[],"statsOk":true,"stats":{"impact":66,"influence":52,"contributions":75,"momentum":45,"veterancy":55,"range":33},"formatted":["10K stars","1K followers","632 merged PRs","5 events per day","10 years","4 languages"],"singular":["1 language","1 year","0.4 events per day"],"nanThrows":true}
 ```
 
 Also run `JSON.stringify(await (async () => { await renderCard('torvalds'); return document.getElementById('statusMsg').textContent; })())` and confirm the existing card still renders (expected `""`, or a rate-limit message if you are rate limited; a `ReferenceError` means the insertion broke the script).
@@ -881,7 +881,7 @@ In `downloadCard`, replace `btn.textContent = '⏳ SAVING...';` with `btn.textCo
 Reload, rerun the Step 1 snippet. Expected (`raws` values vary with octocat's live data):
 
 ```json
-{"keys":["impact","influence","contributions","momentum","veterancy","range"],"labels":["IMPACT","INFLUENCE","CONTRIBUTIONS","MOMENTUM","VETERANCY","RANGE"],"rowsMatch":true,"raws":["<n> stars","<n> followers","<n> merged PRs","<n> events/day","<n> yrs","<n> languages"],"before":{"flipped":false,"label":"Flip to battle stats","pressed":null,"frontHidden":"false","backHidden":"true"},"after":{"flipped":true,"label":"Flip to card front","pressed":null,"frontHidden":"true","backHidden":"false"},"afterRerender":{"flipped":false,"label":"Flip to battle stats","pressed":null,"frontHidden":"false","backHidden":"true"},"reducedMotionRule":true,"cardOverflow":"visible","cardClickOpensGithub":true,"flipBtnOutsideCard":true,"actionsFit":true}
+{"keys":["impact","influence","contributions","momentum","veterancy","range"],"labels":["IMPACT","INFLUENCE","CONTRIBUTIONS","MOMENTUM","VETERANCY","RANGE"],"rowsMatch":true,"raws":["<n> stars","<n> followers","<n> merged PRs","<n> events per day","<n> years","<n> languages"],"before":{"flipped":false,"label":"Flip to battle stats","pressed":null,"frontHidden":"false","backHidden":"true"},"after":{"flipped":true,"label":"Flip to card front","pressed":null,"frontHidden":"true","backHidden":"false"},"afterRerender":{"flipped":false,"label":"Flip to battle stats","pressed":null,"frontHidden":"false","backHidden":"true"},"reducedMotionRule":true,"cardOverflow":"visible","cardClickOpensGithub":true,"flipBtnOutsideCard":true,"actionsFit":true}
 ```
 
 - [ ] **Step 8: Verify keyboard, visuals, and foil**
@@ -1189,11 +1189,11 @@ Run:
 
 ```js
 setCardFlipped(true);
-const img = new Image();
-img.id = 'exportPreview';
-img.src = drawCardBackToCanvas().toDataURL('image/png');
-img.style.cssText = 'position:fixed;top:10px;left:10px;width:340px;z-index:9999;outline:1px solid red';
-document.body.appendChild(img);
+// A canvas element, not <img src="data:...">: the app's CSP img-src blocks data: images.
+const preview = drawCardBackToCanvas();
+preview.id = 'exportPreview';
+preview.style.cssText = 'position:fixed;top:10px;left:10px;width:340px;z-index:9999;outline:1px solid red';
+document.body.appendChild(preview);
 'preview added'
 ```
 

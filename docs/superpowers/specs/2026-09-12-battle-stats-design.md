@@ -42,9 +42,9 @@ Any stat with raw 0 scores 0.
 
 ### MOMENTUM window
 
-One page of up to 100 public events is fetched. GitHub only returns events from the last 90 days.
+One page of up to 100 public events is fetched. GitHub only returns events from the last 30 days.
 
-- Fewer than 100 events: the page is the full 90-day window, so `rate = count / 90`.
+- Fewer than 100 events: the page is the full 30-day window, so `rate = count / 30`.
 - Exactly 100 events: `rate = 100 / max(1, days between the oldest event and fetchedAt)`, where days are fractional (`milliseconds / 86,400,000`), not rounded. The 1-day floor stops a short burst from producing an extreme rate.
 - The rate is measured against the cache entry's `fetchedAt`, not the render time, so a cached card's MOMENTUM does not drift while the entry is fresh.
 
@@ -139,11 +139,11 @@ SHARE is unchanged and posts the card link regardless of which face is showing.
 Performed in the browser against the running page during implementation. No test file is added. Automated tests are deferred until game logic moves into a separate `.js` file.
 
 - **Score math:** every calibration point in the Stats section matches exactly. Raw 0 scores 0. Values past the cap clamp to 99.
-- **MOMENTUM window:** 40 events → 40/90 per day; 100 events with the oldest 2 days old → 50/day; 100 events with the oldest 10 minutes old → floored to 1 day → score 99; 0 events → 0.
+- **MOMENTUM window:** 40 events → 40/30 per day; 100 events with the oldest 2 days old → 50/day; 100 events with the oldest 10 minutes old → floored to 1 day → score 99; 0 events → 0.
 - **Requests:** a fresh card for an account with ≤100 repos makes exactly 4 API requests. A cached render makes 0.
 - **Cache:** a pre-change cache entry is refetched. Editing a cap in `STAT_DEFS` changes the displayed score with no network request.
 - **Real accounts:** dhh, torvalds, sindresorhus, and a small account produce plausible stats.
 - **Errors** (with `fetch` stubbed in the console): a search 403 with `X-RateLimit-Resource: search` names the search limit and reset time; `incomplete_results: true` shows the timeout error and caches nothing; a failed events request shows an error and caches nothing.
-- **UI:** the flip button toggles faces; `aria-pressed` and `aria-hidden` update; Enter and Space activate it; a new card render resets to the front; card click still opens GitHub; tilt and foil glare work on the back; the reduced-motion rule is present.
+- **UI:** the flip button toggles faces; the accessible label and `aria-hidden` update; Enter and Space activate it; a new card render resets to the front; card click still opens GitHub; tilt and foil glare work on the back; the reduced-motion rule is present.
 - **Export:** SAVE on the front produces `devcard-{u}.png` as before. SAVE on the back produces `devcard-{u}-back.png`, visually matching the on-screen back.
 - **Console:** no errors.
