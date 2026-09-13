@@ -10,7 +10,7 @@ Generate collectible trading cards for any GitHub developer. Enter a username, g
 - **Account vintage** — shows the year the account was created; accounts 10+ years old earn a VETERAN modifier
 - **GitDex** — save cards to a persistent local collection (stored in `localStorage`), click any tile to regenerate, drag tiles to reorder; full touch support on mobile with press-to-select and drag-to-reorder
 - **Share to X** — opens a pre-filled tweet with the card's rarity and a shareable link
-- **Download** — exports a 3× resolution PNG rendered via Canvas (pixel-perfect match to the on-page card)
+- **Download** — exports whichever face is showing (front, or the battle stats back) as a 3× resolution PNG rendered via Canvas (pixel-perfect match to the on-page card)
 - **Deep links** — any card URL (`?user=torvalds`) auto-generates the card on load and can be shared directly
 - **GitHub token** — optional personal access token (gear icon) raises the API rate limit from 60 to 5,000 req/hr
 

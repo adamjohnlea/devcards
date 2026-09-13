@@ -1484,9 +1484,10 @@ async function downloadCard() {
   btn.textContent = '⏳ SAVING';
   btn.disabled = true;
   try {
-    const canvas = await drawCardToCanvas();
+    const flipped = isCardFlipped();
+    const canvas = flipped ? drawCardBackToCanvas() : await drawCardToCanvas();
     const link = document.createElement('a');
-    link.download = `devcard-${currentCardData.username}.png`;
+    link.download = `devcard-${currentCardData.username}${flipped ? '-back' : ''}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (err) {
@@ -1691,6 +1692,22 @@ function renderGitDex() {
 
 // ── Canvas export ─────────────────────────────────────────────────────────────
 
+// Shared by both face renderers: clip to the rounded card, then background gradient and accent glow.
+function drawCardBase(ctx, W, H, rarity, accentColor) {
+  rrPath(ctx, 0, 0, W, H, 12); ctx.clip();
+
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, rarity.grad[0]); bg.addColorStop(1, rarity.grad[1]);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const rgb = hexToRgb(accentColor);
+  if (rgb) {
+    const rg = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, W * 0.65);
+    rg.addColorStop(0, `rgba(${rgb},0.13)`); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  }
+}
+
 async function drawCardToCanvas() {
   const { rarity, accentColor, joinYear, veteranLabel } = currentCardData;
   const name      = document.getElementById('cardName').textContent;
@@ -1715,21 +1732,7 @@ async function drawCardToCanvas() {
   const ctx = canvas.getContext('2d');
   ctx.scale(scale, scale);
 
-  // Clip to card rounded rect
-  rrPath(ctx, 0, 0, W, H, 12); ctx.clip();
-
-  // Background gradient
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, rarity.grad[0]); bg.addColorStop(1, rarity.grad[1]);
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  // Accent radial glow
-  const rgb = hexToRgb(accentColor);
-  if (rgb) {
-    const rg = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, W * 0.65);
-    rg.addColorStop(0, `rgba(${rgb},0.13)`); rg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
-  }
+  drawCardBase(ctx, W, H, rarity, accentColor);
 
   function ls(v) { if ('letterSpacing' in ctx) ctx.letterSpacing = v; }
 
@@ -1858,6 +1861,86 @@ async function drawCardToCanvas() {
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.fillText(cardNum, W - 18, badgesTopY + totalBadgeH - 6);
   ls('0px'); ctx.textAlign = 'left';
+
+  return canvas;
+}
+
+// Positions come from offsetLeft/offsetTop/offsetWidth/offsetHeight, which are layout values
+// that ignore the flip and tilt transforms, so back layout changes carry over automatically.
+// Fonts, colors, and letter spacing below must still mirror the .battle-stat* / .card-back* CSS.
+function drawCardBackToCanvas() {
+  const { rarity, accentColor } = currentCardData;
+  const back = document.getElementById('cardBack');
+  const scale = 3, W = back.offsetWidth, H = back.offsetHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width  = W * scale;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  drawCardBase(ctx, W, H, rarity, accentColor);
+
+  function ls(v) { if ('letterSpacing' in ctx) ctx.letterSpacing = v; }
+  const box = el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+  ctx.textBaseline = 'middle';
+
+  // --- Header ---
+  const title = document.getElementById('backTitle');
+  const tb = box(title);
+  ctx.font = '11px "Bebas Neue", sans-serif'; ls('3.3px');
+  ctx.fillStyle = rarity.color;
+  ctx.fillText(title.textContent, tb.x, tb.y + tb.h / 2); ls('0px');
+
+  const handle = document.getElementById('backHandle');
+  const hb = box(handle);
+  ctx.font = '11px "Space Mono", monospace'; ls('1.65px');
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.textAlign = 'right';
+  ctx.fillText(handle.textContent, hb.x + hb.w, hb.y + hb.h / 2);
+  ls('0px'); ctx.textAlign = 'left';
+
+  // --- Stat rows ---
+  document.querySelectorAll('#battleStats .battle-stat').forEach(li => {
+    const label = li.querySelector('.battle-stat-label');
+    const bar   = li.querySelector('.battle-stat-bar');
+    const score = li.querySelector('.battle-stat-score');
+    const raw   = li.querySelector('.battle-stat-raw');
+
+    const lb = box(label);
+    ctx.font = '15px "Bebas Neue", sans-serif'; ls('1.8px');
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label.textContent, lb.x, lb.y + lb.h / 2); ls('0px');
+
+    const bb = box(bar);
+    rrPath(ctx, bb.x, bb.y, bb.w, bb.h, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+    const fillW = bb.w * Number(li.dataset.score) / 100;
+    if (fillW > 0) {
+      rrPath(ctx, bb.x, bb.y, fillW, bb.h, Math.min(3, fillW / 2));
+      ctx.fillStyle = accentColor; ctx.fill();
+    }
+
+    const sb = box(score);
+    ctx.font = '20px "Bebas Neue", sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'right';
+    ctx.fillText(score.textContent, sb.x + sb.w, sb.y + sb.h / 2);
+    ctx.textAlign = 'left';
+
+    const rb = box(raw);
+    ctx.font = '9px "Space Mono", monospace'; ls('0.9px');
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText(raw.textContent, rb.x, rb.y + rb.h / 2); ls('0px');
+  });
+
+  // --- Footer ---
+  const cardNum = document.getElementById('backCardNumber');
+  const cb = box(cardNum);
+  ctx.font = '9px "Space Mono", monospace'; ls('0.9px');
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'right';
+  ctx.fillText(cardNum.textContent, cb.x + cb.w, cb.y + cb.h / 2);
+  ls('0px'); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
   return canvas;
 }
