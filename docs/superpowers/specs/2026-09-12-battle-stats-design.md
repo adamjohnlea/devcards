@@ -57,7 +57,7 @@ One page of up to 100 public events is fetched. GitHub only returns events from 
 
 All changes stay in `index.html`.
 
-- `STAT_DEFS`: a single table, one entry per stat: key, display label, how to read the raw input, scale (`log` or `linear`), cap, and a raw-value formatter for the card back (e.g. `45.2K ★`). Rebalancing means editing a cap here.
+- `STAT_DEFS`: a single table, one entry per stat: key, display label, how to read the raw input, scale (`log` or `linear`), cap, and a raw-value formatter for the card back (e.g. `45.2K stars`; words rather than symbols, so screen readers announce them). Rebalancing means editing a cap here.
 - `computeBattleStats(raw)`: a pure function taking raw inputs and returning `{ key: score }` for all six stats. It has no DOM or network access, so future game modes call it directly.
 - Scores are never stored. They are computed from cached raw inputs at render time, so cap changes apply immediately without refetching.
 
@@ -106,7 +106,7 @@ Each face owns its border radius, clipping, and `backface-visibility: hidden`. E
 
 - A real `<button>` labeled "↻ FLIP" in the existing action row (SAVE / SHARE / + GITDEX).
 - One `flipCard()` function implements the flip.
-- `aria-pressed` reflects the state. The accessible label toggles between "Show battle stats" and "Show card front". The hidden face gets `aria-hidden="true"`.
+- The accessible label toggles between "Flip to battle stats" and "Flip to card front". No `aria-pressed`: WAI-ARIA guidance is to either change the label or use `aria-pressed` with a fixed label, not both, and the label must contain the visible text "FLIP" (WCAG label-in-name). The hidden face gets `aria-hidden="true"`.
 - Every new card render resets to the front.
 - Under `prefers-reduced-motion: reduce`, the flip is instant (no transition).
 
