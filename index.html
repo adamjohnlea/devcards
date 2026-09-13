@@ -888,6 +888,8 @@ function calcRarity(stars, followers) {
 }
 
 function fmtNum(n) {
+  // 999,950+ would round to "1000.0K", so switch to millions there.
+  if (n >= 999950) return (n/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
   if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
   return String(n);
 }
@@ -913,37 +915,155 @@ function githubHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function fetchUserData(username) {
+const REPOS_PER_PAGE = 100;
+
+async function apiError(res) {
+  const remaining = res.headers.get('X-RateLimit-Remaining');
+  const reset     = res.headers.get('X-RateLimit-Reset');
+  const body      = await res.json().catch(() => ({}));
+
+  console.error('[GitHub API]', {
+    url:       res.url,
+    status:    res.status,
+    message:   body.message,
+    remaining: remaining,
+    resetsAt:  reset ? new Date(reset * 1000).toLocaleTimeString() : null,
+  });
+
+  if (res.status === 404) return new Error('User not found');
+  if (res.status === 403 || res.status === 429) {
+    const resetsAt = reset ? ` Resets at ${new Date(reset * 1000).toLocaleTimeString()}.` : '';
+    const tokenHint = getToken() ? '' : ' Add a GitHub token (⚙) for 5,000 req/hr.';
+    return new Error(`Rate limit exceeded.${resetsAt}${tokenHint}`);
+  }
+  return new Error(body.message || `GitHub API error (${res.status})`);
+}
+
+function repoPageUrl(enc, page) {
+  // sort=full_name keeps page boundaries stable; sort=updated can shift repos between pages mid-fetch.
+  return `https://api.github.com/users/${enc}/repos?per_page=${REPOS_PER_PAGE}&sort=full_name&page=${page}`;
+}
+
+async function fetchRepoPage(enc, page, opts) {
+  const res = await fetch(repoPageUrl(enc, page), opts);
+  if (!res.ok) throw await apiError(res);
+  return res.json();
+}
+
+async function fetchUserData(username, onProgress) {
   const enc = encodeURIComponent(username);
   const opts = { headers: githubHeaders() };
-  const [userRes, reposRes] = await Promise.all([
+  const [userRes, firstPageRes] = await Promise.all([
     fetch(`https://api.github.com/users/${enc}`, opts),
-    fetch(`https://api.github.com/users/${enc}/repos?per_page=100&sort=updated`, opts)
+    fetch(repoPageUrl(enc, 1), opts)
   ]);
 
-  if (!userRes.ok) {
-    const remaining = userRes.headers.get('X-RateLimit-Remaining');
-    const reset     = userRes.headers.get('X-RateLimit-Reset');
-    const body      = await userRes.json().catch(() => ({}));
-
-    console.error('[GitHub API]', {
-      status:    userRes.status,
-      message:   body.message,
-      remaining: remaining,
-      resetsAt:  reset ? new Date(reset * 1000).toLocaleTimeString() : null,
-    });
-
-    if (userRes.status === 404) throw new Error('User not found');
-    if (userRes.status === 403 || userRes.status === 429) {
-      const resetsAt = reset ? ` Resets at ${new Date(reset * 1000).toLocaleTimeString()}.` : '';
-      throw new Error(`Rate limit exceeded.${resetsAt}`);
-    }
-    throw new Error(body.message || `GitHub API error (${userRes.status})`);
-  }
+  if (!userRes.ok) throw await apiError(userRes);
+  if (!firstPageRes.ok) throw await apiError(firstPageRes);
 
   const user = await userRes.json();
-  const repos = reposRes.ok ? await reposRes.json() : [];
+  let lastPage = await firstPageRes.json();
+  const repos = [...lastPage];
+
+  // Fetch the remaining pages GitHub reports in parallel...
+  const pageCount = Math.ceil(user.public_repos / REPOS_PER_PAGE);
+  if (pageCount > 1) {
+    onProgress(`Fetching ${user.public_repos} repos (${pageCount} pages)...`);
+    const pages = await Promise.all(
+      Array.from({ length: pageCount - 1 }, (_, i) => fetchRepoPage(enc, i + 2, opts))
+    );
+    pages.forEach(p => repos.push(...p));
+    lastPage = pages[pages.length - 1];
+  }
+
+  // ...then keep going while pages come back full, in case public_repos was stale.
+  let page = Math.max(pageCount, 1);
+  while (lastPage.length === REPOS_PER_PAGE) {
+    page++;
+    lastPage = await fetchRepoPage(enc, page, opts);
+    repos.push(...lastPage);
+  }
+
   return { user, repos };
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+
+const CACHE_PREFIX = 'devcard_cache:';
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
+function cacheKey(username) {
+  return CACHE_PREFIX + username.toLowerCase();
+}
+
+function isValidCacheEntry(e) {
+  const u = e && e.user;
+  return !!u &&
+    Number.isFinite(e.fetchedAt) && Number.isFinite(e.stars) &&
+    Array.isArray(e.langs) && e.langs.every(l => typeof l === 'string') &&
+    typeof u.login === 'string' && VALID_USERNAME.test(u.login) &&
+    typeof u.avatar_url === 'string' && u.avatar_url.startsWith('https://avatars.githubusercontent.com') &&
+    Number.isFinite(u.id) && Number.isFinite(u.followers) && Number.isFinite(u.public_repos) &&
+    typeof u.created_at === 'string';
+}
+
+function isFresh(entry) {
+  return Date.now() - entry.fetchedAt < CACHE_TTL_MS;
+}
+
+function readCache(username) {
+  const key = cacheKey(username);
+  const raw = localStorage.getItem(key);
+  if (raw === null) return null;
+  try {
+    const entry = JSON.parse(raw);
+    if (isValidCacheEntry(entry) && isFresh(entry)) return entry;
+  } catch (err) {
+    console.error('[Cache] Unreadable entry, refetching', key, err);
+  }
+  localStorage.removeItem(key);
+  return null;
+}
+
+function pruneCache() {
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith(CACHE_PREFIX)) continue;
+    try {
+      const entry = JSON.parse(localStorage.getItem(key));
+      if (isValidCacheEntry(entry) && isFresh(entry)) continue;
+    } catch (err) {
+      console.error('[Cache] Removing unreadable entry', key, err);
+    }
+    localStorage.removeItem(key);
+  }
+}
+
+function writeCache(username, entry) {
+  pruneCache();
+  localStorage.setItem(cacheKey(username), JSON.stringify(entry));
+}
+
+async function loadCardData(username, onProgress) {
+  const cached = readCache(username);
+  if (cached) return { data: cached, cacheError: null };
+
+  const { user, repos } = await fetchUserData(username, onProgress);
+  const { stars, langs } = computeStats(repos);
+  const { login, name, avatar_url, id, followers, public_repos, created_at, hireable, blog } = user;
+  const data = {
+    user: { login, name, avatar_url, id, followers, public_repos, created_at, hireable, blog },
+    stars, langs, fetchedAt: Date.now(),
+  };
+
+  let cacheError = null;
+  try {
+    writeCache(username, data);
+  } catch (err) {
+    console.error('[Cache] Could not store card data', username, err);
+    cacheError = err;
+  }
+  return { data, cacheError };
 }
 
 function computeStats(repos) {
@@ -973,8 +1093,8 @@ async function renderCard(username) {
   status.className = 'status-msg';
 
   try {
-    const { user, repos } = await fetchUserData(username);
-    const { stars, langs } = computeStats(repos);
+    const { data, cacheError } = await loadCardData(username, msg => { status.textContent = msg; });
+    const { user, stars, langs } = data;
     const rarity = calcRarity(stars, user.followers);
     const ability = buildAbility(user, langs);
     const topLang = langs[0] || null;
@@ -1052,7 +1172,7 @@ async function renderCard(username) {
       modEl.classList.add('hidden');
     }
 
-    status.textContent = '';
+    status.textContent = cacheError ? `Card not cached: ${cacheError.message}` : '';
     container.classList.remove('hidden');
     updateGitDexBtn();
     history.replaceState(null, '', `?user=${encodeURIComponent(username)}`);

@@ -16,7 +16,7 @@ Load `?user=<username>` to jump straight to a card (the init block at the bottom
 
 **Card generation flow** (`renderCard(username)`, shared by the input, quick-gen buttons, GitDex tiles, and deep links):
 1. Username validated against `VALID_USERNAME` regex (also used to sanitize GitDex entries and the `?user=` param)
-2. `fetchUserData()` fires `GET /users/{u}` and `GET /users/{u}/repos?per_page=100&sort=updated` in parallel, with `githubHeaders()` adding a Bearer token if one is saved. Only the user response is checked for errors (404 → "User not found", 403/429 → rate-limit message with reset time); a failed repos call silently yields `[]`
+2. `loadCardData()` returns a fresh `localStorage` cache entry if one exists; otherwise `fetchUserData()` fetches `GET /users/{u}` plus repo page 1 in parallel, then pages 2..ceil(`public_repos`/100) in parallel, then keeps fetching while a page comes back full (guards against a stale `public_repos`). Repos use `sort=full_name` because `sort=updated` can shift repos across page boundaries mid-fetch. `githubHeaders()` adds a Bearer token if one is saved. Any failed request throws via `apiError()` (404 → "User not found", 403/429 → rate-limit message with reset time and a token hint); never substitute partial repo data, since it would be cached
 3. `computeStats(repos)` → total stars + languages sorted by frequency
 4. `calcRarity(stars, followers)` → tier label, color, gradient. Score is `stars + followers*2`: LEGENDARY > 50,000 | EPIC > 5,000 | RARE > 500 | UNCOMMON > 50 | COMMON ≤ 50 (strict `>`, so a boundary score drops to the lower tier)
 5. `buildAbility(user, langs)` → special ability text

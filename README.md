@@ -27,9 +27,11 @@ Or drop it into [Laravel Herd](https://herd.laravel.com), Apache, Nginx — anyt
 
 The entire app is a single `index.html` file containing HTML, CSS, and vanilla JavaScript.
 
-On card generation, two GitHub API requests run in parallel:
-- `GET /users/{username}` — profile data
-- `GET /users/{username}/repos?per_page=100&sort=updated` — repository data
+On card generation, the app fetches:
+- `GET /users/{username}`: profile data
+- `GET /users/{username}/repos?per_page=100&sort=full_name&page=N`: every page of repositories, so star totals are accurate for accounts with more than 100 repos (a 1,000-repo account costs about 11 requests)
+
+Results are cached in `localStorage` for 1 hour per username, so regenerating a card (from GitDex, a reload, or a shared link) makes no API calls.
 
 Stats are computed client-side, a rarity tier is assigned, and the card DOM is updated with a CSS reveal animation. Clicking the card opens the developer's GitHub profile.
 
