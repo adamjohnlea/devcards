@@ -5,6 +5,7 @@ Generate collectible trading cards for any GitHub developer. Enter a username, g
 ## Features
 
 - **Rarity system** — cards are ranked COMMON, UNCOMMON, RARE, EPIC, or LEGENDARY based on stars and followers
+- **Battle stats** — flip a card (↻ FLIP) to see six 0–99 stats: IMPACT (stars), INFLUENCE (followers), CONTRIBUTIONS (merged PRs), MOMENTUM (recent activity), VETERANCY (account age), and RANGE (languages)
 - **Special ability** — generated from the developer's GitHub profile (languages, repos, follower count, hireable status)
 - **Account vintage** — shows the year the account was created; accounts 10+ years old earn a VETERAN modifier
 - **GitDex** — save cards to a persistent local collection (stored in `localStorage`), click any tile to regenerate, drag tiles to reorder; full touch support on mobile with press-to-select and drag-to-reorder

@@ -134,7 +134,6 @@
     min-height: 520px;
     position: relative;
     border-radius: 12px;
-    overflow: hidden;
     transform-style: preserve-3d;
     transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
     cursor: pointer;
@@ -196,6 +195,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .card-foil { animation: none; }
+    .card-flipper { transition: none; }
   }
 
   .card-inner {
@@ -391,6 +391,96 @@
     color: rgba(255,255,255,0.25);
     letter-spacing: 0.1em;
     text-align: right;
+  }
+
+  /* ── CARD FACES ───────────────────────── */
+  /* .card must not regain overflow: hidden; it flattens 3D and breaks the flip. */
+  .card-flipper {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .card.is-flipped .card-flipper { transform: rotateY(180deg); }
+
+  .card-face {
+    border-radius: 12px;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* The front stays in flow and sets the card's height; the back overlays it. */
+  .card-front {
+    position: relative;
+    min-height: 520px;
+  }
+
+  .card-back {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+  }
+
+  .card-back-handle {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.15em;
+    line-height: 1;
+  }
+
+  .battle-stats {
+    list-style: none;
+    margin: 0;
+    padding: 8px 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .battle-stat-row {
+    display: grid;
+    grid-template-columns: 112px 1fr 28px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .battle-stat-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .battle-stat-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .battle-stat-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+
+  .battle-stat-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #fff;
+    text-align: right;
+    line-height: 1;
+  }
+
+  .battle-stat-raw {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.4);
+    margin-top: 4px;
+    line-height: 1;
   }
 
   /* ── CARD ACTIONS ─────────────────────── */
@@ -791,54 +881,76 @@
 <div id="cardContainer" class="hidden">
   <div class="card-scene">
     <div class="card" id="devCard">
-      <div class="card-bg" id="cardBg"></div>
-      <div class="card-foil"></div>
-      <div class="card-inner">
-        <div class="card-header">
-          <div class="card-series">DEV CARDS // S01</div>
-          <div class="rarity-block">
-            <div class="rarity-badge" id="rarityBadge"></div>
-            <div class="rarity-modifier hidden" id="rarityModifier"></div>
+      <div class="card-flipper">
+        <div class="card-face card-front" id="cardFront" aria-hidden="false">
+          <div class="card-bg" id="cardBg"></div>
+          <div class="card-foil"></div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="card-series">DEV CARDS // S01</div>
+              <div class="rarity-block">
+                <div class="rarity-badge" id="rarityBadge"></div>
+                <div class="rarity-modifier hidden" id="rarityModifier"></div>
+              </div>
+            </div>
+            <div class="card-portrait-wrap">
+              <div class="card-portrait-frame">
+                <img class="card-avatar" id="cardAvatar" src="" alt="avatar" crossorigin="anonymous" />
+              </div>
+            </div>
+            <div class="card-name-block">
+              <div class="card-name" id="cardName"></div>
+              <div class="card-handle" id="cardHandle"></div>
+            </div>
+            <div class="card-ability" id="cardAbility">
+              <div class="card-ability-label">SPECIAL ABILITY</div>
+              <div class="card-ability-text" id="abilityText"></div>
+            </div>
+            <div class="card-stats">
+              <div class="stat-cell">
+                <div class="stat-val" id="statRepos">—</div>
+                <div class="stat-label">Repos</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-val" id="statStars">—</div>
+                <div class="stat-label">Stars</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-val" id="statFollowers">—</div>
+                <div class="stat-label">Followers</div>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="card-lang-badges" id="langBadges"></div>
+              <div class="card-meta">
+                <div class="card-vintage hidden" id="cardVintage"></div>
+                <div class="card-number" id="cardNumber"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="card-portrait-wrap">
-          <div class="card-portrait-frame">
-            <img class="card-avatar" id="cardAvatar" src="" alt="avatar" crossorigin="anonymous" />
-          </div>
-        </div>
-        <div class="card-name-block">
-          <div class="card-name" id="cardName"></div>
-          <div class="card-handle" id="cardHandle"></div>
-        </div>
-        <div class="card-ability" id="cardAbility">
-          <div class="card-ability-label">SPECIAL ABILITY</div>
-          <div class="card-ability-text" id="abilityText"></div>
-        </div>
-        <div class="card-stats">
-          <div class="stat-cell">
-            <div class="stat-val" id="statRepos">—</div>
-            <div class="stat-label">Repos</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-val" id="statStars">—</div>
-            <div class="stat-label">Stars</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-val" id="statFollowers">—</div>
-            <div class="stat-label">Followers</div>
-          </div>
-        </div>
-        <div class="card-footer">
-          <div class="card-lang-badges" id="langBadges"></div>
-          <div class="card-meta">
-            <div class="card-vintage hidden" id="cardVintage"></div>
-            <div class="card-number" id="cardNumber"></div>
+        <div class="card-face card-back" id="cardBack" aria-hidden="true">
+          <div class="card-bg" id="cardBackBg"></div>
+          <div class="card-foil"></div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="card-series" id="backTitle">BATTLE STATS</div>
+              <div class="card-back-handle" id="backHandle"></div>
+            </div>
+            <ul class="battle-stats" id="battleStats"></ul>
+            <div class="card-footer">
+              <div></div>
+              <div class="card-meta">
+                <div class="card-number" id="backCardNumber"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="card-actions">
+    <button class="action-btn" id="flipBtn" onclick="flipCard()" aria-label="Flip to battle stats">↻ FLIP</button>
     <button class="action-btn" id="downloadBtn" onclick="downloadCard()">⬇ SAVE</button>
     <button class="action-btn share-btn" onclick="shareCard()">𝕏 SHARE</button>
     <button class="action-btn gitdex-btn" id="gitdexBtn" onclick="addToGitDex()">+ GITDEX</button>
@@ -1192,12 +1304,13 @@ async function renderCard(username) {
       veteranLabel,
     };
 
-    // Card BG
-    const cardBg = document.getElementById('cardBg');
-    cardBg.style.background = `
+    // Card BG (both faces)
+    const cardBgStyle = `
       radial-gradient(ellipse at 50% 0%, ${accentColor}22 0%, transparent 65%),
       linear-gradient(170deg, ${rarity.grad[0]} 0%, ${rarity.grad[1]} 100%)
     `;
+    document.getElementById('cardBg').style.background = cardBgStyle;
+    document.getElementById('cardBackBg').style.background = cardBgStyle;
 
     // Rarity badge
     const rb = document.getElementById('rarityBadge');
@@ -1251,6 +1364,9 @@ async function renderCard(username) {
       modEl.classList.add('hidden');
     }
 
+    renderBattleStats(data, rarity, accentColor);
+    setCardFlipped(false);
+
     status.textContent = cacheError ? `Card not cached: ${cacheError.message}` : '';
     container.classList.remove('hidden');
     updateGitDexBtn();
@@ -1289,6 +1405,73 @@ function quickGen(name) {
   renderCard(name);
 }
 
+// ── Card back ─────────────────────────────────────────────────────────────────
+
+function renderBattleStats(data, rarity, accentColor) {
+  const raw = battleRawInputs(data);
+  const scores = computeBattleStats(raw);
+
+  document.getElementById('backTitle').style.color = rarity.color;
+  document.getElementById('backHandle').textContent = `@${data.user.login}`;
+  document.getElementById('backCardNumber').textContent = `#${String(data.user.id).padStart(7,'0')} · DEV-S01`;
+
+  const list = document.getElementById('battleStats');
+  list.innerHTML = '';
+  STAT_DEFS.forEach(def => {
+    const score = scores[def.key];
+
+    const li = document.createElement('li');
+    li.className = 'battle-stat';
+    li.dataset.stat = def.key;
+    li.dataset.score = String(score);
+
+    const row = document.createElement('div');
+    row.className = 'battle-stat-row';
+
+    const label = document.createElement('span');
+    label.className = 'battle-stat-label';
+    label.textContent = def.label;
+
+    const bar = document.createElement('div');
+    bar.className = 'battle-stat-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    const fill = document.createElement('div');
+    fill.className = 'battle-stat-fill';
+    fill.style.width = `${score}%`;
+    fill.style.background = accentColor;
+    bar.appendChild(fill);
+
+    const scoreEl = document.createElement('span');
+    scoreEl.className = 'battle-stat-score';
+    scoreEl.textContent = String(score);
+
+    row.append(label, bar, scoreEl);
+
+    const rawEl = document.createElement('div');
+    rawEl.className = 'battle-stat-raw';
+    rawEl.textContent = def.format(def.raw(raw));
+
+    li.append(row, rawEl);
+    list.appendChild(li);
+  });
+}
+
+function isCardFlipped() {
+  return document.getElementById('devCard').classList.contains('is-flipped');
+}
+
+function setCardFlipped(flipped) {
+  document.getElementById('devCard').classList.toggle('is-flipped', flipped);
+  document.getElementById('cardFront').setAttribute('aria-hidden', String(flipped));
+  document.getElementById('cardBack').setAttribute('aria-hidden', String(!flipped));
+  document.getElementById('flipBtn').setAttribute('aria-label', flipped ? 'Flip to card front' : 'Flip to battle stats');
+}
+
+function flipCard() {
+  if (!currentCardData) return;
+  setCardFlipped(!isCardFlipped());
+}
+
 document.getElementById('usernameInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') generateCard();
 });
@@ -1298,7 +1481,7 @@ document.getElementById('usernameInput').addEventListener('keydown', e => {
 async function downloadCard() {
   if (!currentCardData) return;
   const btn = document.getElementById('downloadBtn');
-  btn.textContent = '⏳ SAVING...';
+  btn.textContent = '⏳ SAVING';
   btn.disabled = true;
   try {
     const canvas = await drawCardToCanvas();
