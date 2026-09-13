@@ -1075,6 +1075,59 @@ function computeStats(repos) {
   return { stars, langs };
 }
 
+// ── Battle stats ──────────────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-09-12-battle-stats-design.md
+
+const EVENTS_PAGE_SIZE = 100;
+const EVENTS_WINDOW_DAYS = 90;
+const MS_PER_DAY = 86400000;
+
+function formatRate(v) {
+  return v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v));
+}
+
+// Rebalance by editing caps. Order here is the order on the card back.
+const STAT_DEFS = [
+  { key: 'impact',        label: 'IMPACT',        scale: 'log',    cap: 1000000, raw: r => r.stars,         format: v => `${fmtNum(v)} stars` },
+  { key: 'influence',     label: 'INFLUENCE',     scale: 'log',    cap: 500000,  raw: r => r.followers,     format: v => `${fmtNum(v)} followers` },
+  { key: 'contributions', label: 'CONTRIBUTIONS', scale: 'log',    cap: 5000,    raw: r => r.mergedPrs,     format: v => `${fmtNum(v)} merged PRs` },
+  { key: 'momentum',      label: 'MOMENTUM',      scale: 'log',    cap: 50,      raw: r => r.momentumRate,  format: v => `${formatRate(v)} events/day` },
+  { key: 'veterancy',     label: 'VETERANCY',     scale: 'linear', cap: 18,      raw: r => r.accountYears,  format: v => { const n = Math.floor(v); return `${n} ${n === 1 ? 'yr' : 'yrs'}`; } },
+  { key: 'range',         label: 'RANGE',         scale: 'linear', cap: 12,      raw: r => r.languageCount, format: v => `${v} ${v === 1 ? 'language' : 'languages'}` },
+];
+
+function scoreStat(def, raw) {
+  if (!Number.isFinite(raw)) throw new Error(`Stat ${def.key} got non-finite raw value: ${raw}`);
+  if (raw <= 0) return 0;
+  const ratio = def.scale === 'log'
+    ? Math.log10(1 + raw) / Math.log10(1 + def.cap)
+    : raw / def.cap;
+  return Math.round(99 * Math.min(1, ratio));
+}
+
+// One page of events: a short page is the whole 90-day window; a full page covers
+// only back to its oldest event, floored at 1 day so a burst can't spike the rate.
+function momentumRate(events, fetchedAt) {
+  if (events.count < EVENTS_PAGE_SIZE) return events.count / EVENTS_WINDOW_DAYS;
+  const days = (fetchedAt - Date.parse(events.oldestAt)) / MS_PER_DAY;
+  return EVENTS_PAGE_SIZE / Math.max(1, days);
+}
+
+function battleRawInputs(data) {
+  return {
+    stars: data.stars,
+    followers: data.user.followers,
+    mergedPrs: data.mergedPrs,
+    momentumRate: momentumRate(data.events, data.fetchedAt),
+    accountYears: (data.fetchedAt - Date.parse(data.user.created_at)) / (365.25 * MS_PER_DAY),
+    languageCount: data.langs.length,
+  };
+}
+
+function computeBattleStats(rawInputs) {
+  return Object.fromEntries(STAT_DEFS.map(def => [def.key, scoreStat(def, def.raw(rawInputs))]));
+}
+
 const VALID_USERNAME = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,37}[a-zA-Z0-9]$|^[a-zA-Z0-9]$/;
 
 async function generateCard() {
