@@ -1069,7 +1069,8 @@ async function loadCardData(username, onProgress) {
 function computeStats(repos) {
   const stars = repos.reduce((s,r) => s + r.stargazers_count, 0);
   const langMap = {};
-  repos.forEach(r => { if (r.language) langMap[r.language] = (langMap[r.language]||0) + 1; });
+  // Forks carry the upstream project's language, not the user's own work.
+  repos.forEach(r => { if (r.language && !r.fork) langMap[r.language] = (langMap[r.language]||0) + 1; });
   const langs = Object.entries(langMap).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
   return { stars, langs };
 }
