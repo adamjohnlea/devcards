@@ -18,7 +18,7 @@ Load `?user=<username>` to jump straight to a card (the init block at the bottom
 1. Username validated against `VALID_USERNAME` regex (also used to sanitize GitDex entries and the `?user=` param)
 2. `fetchUserData()` fires `GET /users/{u}` and `GET /users/{u}/repos?per_page=100&sort=updated` in parallel, with `githubHeaders()` adding a Bearer token if one is saved. Only the user response is checked for errors (404 → "User not found", 403/429 → rate-limit message with reset time); a failed repos call silently yields `[]`
 3. `computeStats(repos)` → total stars + languages sorted by frequency
-4. `calcRarity(stars, followers)` → tier label, color, gradient. Score is `stars + followers*2`: LEGENDARY ≥ 50,000 | EPIC ≥ 5,000 | RARE ≥ 500 | UNCOMMON ≥ 50 | COMMON
+4. `calcRarity(stars, followers)` → tier label, color, gradient. Score is `stars + followers*2`: LEGENDARY > 50,000 | EPIC > 5,000 | RARE > 500 | UNCOMMON > 50 | COMMON ≤ 50 (strict `>`, so a boundary score drops to the lower tier)
 5. `buildAbility(user, langs)` → special ability text
 6. Card DOM populated, `currentCardData` set, URL updated via `history.replaceState`, VETERAN modifier shown if account ≥ 10 years old
 
@@ -28,7 +28,7 @@ Load `?user=<username>` to jump straight to a card (the init block at the bottom
 - `gitdex`: array of saved cards `{username, name, avatarUrl, rarityColor, rarityLabel, ...}`. `getDex()` strictly validates every entry (username regex, avatar must be on `avatars.githubusercontent.com`, hex color, known rarity label) and drops invalid ones; keep that validation in sync when adding fields. `renderGitDex()` handles tile rendering plus mouse and touch drag-to-reorder.
 - `gh_token`: optional GitHub PAT from the settings panel (gear icon), raising the rate limit from 60 to 5,000 req/hr.
 
-**Styling:** theming via CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, `--text`, `--muted`). Card effects use 3D perspective transforms (mouse parallax set in `renderCard`), clip-path, and CSS animations (`cardReveal`, `spin`, foil shimmer). Fonts: Bebas Neue (headings), Space Mono (mono), Rajdhani (UI), loaded from Google Fonts. Card accent color comes from the top language via `LANG_COLORS` (add new languages there), falling back to the rarity color.
+**Styling:** theming via CSS custom properties (`--bg`, `--surface`, `--border`, `--accent`, `--text`, `--muted`). Card effects use 3D perspective transforms (mouse parallax set in `renderCard`), clip-path, and CSS animations (`cardReveal`, `foilSweep`, `spin`). The `.card-foil` overlay is a pointer-tracked glare: the same mousemove handler that tilts the card sets `--foil-x`, `--foil-y`, and `--foil-shift` on `.card`, and `foilSweep` plays one shine pass on reveal (disabled under `prefers-reduced-motion`). The foil is screen-only and intentionally not drawn by the PNG export. Fonts: Bebas Neue (headings), Space Mono (mono), Rajdhani (UI), loaded from Google Fonts. Card accent color comes from the top language via `getLangColor()`/`LANG_COLORS` (add new languages there); a language missing from the map gets `#888`, and the rarity color is used only when the user has no languages at all.
 
 ## Content Security Policy
 

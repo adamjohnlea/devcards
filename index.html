@@ -157,22 +157,46 @@
     z-index: 0;
   }
 
+  /* Foil: --foil-x / --foil-y / --foil-shift are set on .card by the mousemove handler in renderCard() */
   .card-foil {
     position: absolute;
     inset: 0;
     z-index: 1;
     pointer-events: none;
     opacity: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      rgba(255,255,255,0.06) 50%,
-      transparent 60%
-    );
+    mix-blend-mode: screen;
+    background:
+      radial-gradient(
+        circle at var(--foil-x, 50%) var(--foil-y, 50%),
+        rgba(255,255,255,0.22) 0%,
+        rgba(255,255,255,0.07) 22%,
+        transparent 50%
+      ),
+      linear-gradient(
+        115deg,
+        transparent 30%,
+        rgba(0,245,255,0.10) 42%,
+        rgba(255,0,200,0.10) 50%,
+        rgba(255,215,0,0.10) 58%,
+        transparent 70%
+      );
+    background-size: 100% 100%, 250% 250%;
+    background-position: 0 0, var(--foil-shift, 50%) 50%;
     transition: opacity 0.3s;
+    animation: foilSweep 1.1s ease-out 0.55s backwards;
   }
 
   .card:hover .card-foil { opacity: 1; }
+
+  @keyframes foilSweep {
+    0%   { opacity: 0; background-position: 0 0, 100% 50%; }
+    35%  { opacity: 1; }
+    100% { opacity: 0; background-position: 0 0, 0% 50%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-foil { animation: none; }
+  }
 
   .card-inner {
     position: relative;
@@ -1040,9 +1064,13 @@ async function renderCard(username) {
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
       card.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 10}deg) scale(1.02)`;
+      card.style.setProperty('--foil-x', `${(x + 0.5) * 100}%`);
+      card.style.setProperty('--foil-y', `${(y + 0.5) * 100}%`);
+      card.style.setProperty('--foil-shift', `${(x + 0.5) * 100}%`);
     };
     card.onmouseleave = () => {
       card.style.transform = '';
+      ['--foil-x', '--foil-y', '--foil-shift'].forEach(p => card.style.removeProperty(p));
     };
 
     card.onclick = () => {

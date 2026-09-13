@@ -37,11 +37,11 @@ Stats are computed client-side, a rarity tier is assigned, and the card DOM is u
 
 | Tier | Score |
 |------|-------|
-| LEGENDARY | 50,000+ |
-| EPIC | 5,000+ |
-| RARE | 500+ |
-| UNCOMMON | 50+ |
-| COMMON | < 50 |
+| LEGENDARY | > 50,000 |
+| EPIC | > 5,000 |
+| RARE | > 500 |
+| UNCOMMON | > 50 |
+| COMMON | ≤ 50 |
 
 ## GitHub API
 
